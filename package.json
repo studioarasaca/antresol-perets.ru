@@ -97,5 +97,8 @@
   },
   "trustedDependencies": [
     "unrs-resolver"
-  ]
+  ],
+  "overrides": {
+    "unrs-resolver": "1.12.2"
+  }
 }
