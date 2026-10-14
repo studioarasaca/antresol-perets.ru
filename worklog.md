@@ -84,3 +84,20 @@ Work Log:
 Stage Summary:
 - Репозиторий деплой-готов: сборка npm run build (prisma generate + next build) и старт npm run start (prisma db push + next start) работают без .env и без bun
 - Пользователю: перезапустить деплой на платформе; если ошибка останется — прислать текст лога
+---
+Task ID: 4
+Agent: Z.ai Code (main)
+Task: Проверить данные проекта и подключиться к новому репозиторию studioarasaca/antresol-perets.ru
+
+Work Log:
+- Проверил состояние данных: фикс деплоя (f4b69ba) на месте — prisma/schema.prisma с захардкоженным SQLite URL (file:../db/custom.db, без зависимости от .env), package.json: build = prisma generate && next build, start = prisma db push && next start, postinstall = prisma generate; next.config.ts без standalone
+- Проверил .gitignore: .env и db/*.db исключены, токен не хранится в git config
+- Проверил доступ токена к новому репо: git ls-remote studioarasaca/antresol-perets.ru — успешно; удалённый main = f4b69ba (идентичен локальному, репо является зеркалом старого arasacacorp)
+- Закоммитил несохранённые изменения (bun.lock: +tailwindcss/@tailwindcss/postcss/tw-animate-css/typescript; mode-изменения 644→755) → коммит 286ca06
+- Переключил remote origin на https://github.com/studioarasaca/antresol-perets.ru.git и запушил: f4b69ba..286ca06 main -> main
+- Удалил токен из remote URL после пуша (remote хранит чистый URL), верифицировал: refs/heads/main = 286ca06
+
+Stage Summary:
+- Проект подключён к новому репозиторию studioarasaca/antresol-perets.ru, ветка main синхронизирована (286ca06)
+- Все данные деплоя валидны: схема Prisma самодостаточна, скрипты сборки/старта готовы для хостинга (Node >= 20.9), секреты в репо отсутствуют
+- Токен из конфига git удалён, рабочее дерево чистое
