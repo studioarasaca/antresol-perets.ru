@@ -119,3 +119,22 @@ Stage Summary:
 - Фикс деплоя опубликован: commit 738036b "fix(deploy): trust unrs-resolver lifecycle script" в studioarasaca/antresol-perets.ru
 - Онрезе нужен повторный деплой (Redeploy) — заберёт коммит 738036b, где unrs-resolver выполняется на фазе install, минуя сломанную trust-фазу
 - Полный пайплайн Онрезы (bun 1.4.3: install → trust → build → db push) проверен локально — все этапы зелёные
+---
+Task ID: 6
+Agent: Z.ai Code (main)
+Task: Второй раунд фикса деплоя Онрезы — Permission denied на bin napi-postinstall во время bun install
+
+Work Log:
+- Новый лог Онрезы: после trustedDependencies скрипт unrs-resolver стал выполняться на фазе install — и там тоже Permission denied. Вывод: на ФС Онрезы bin-файл napi-postinstall неисполним в принципе, фаза не важна
+- Скачал тарбол napi-postinstall@0.3.0 с npm: ВСЕ файлы в тарболе имеют режим 644 (без exec-бита), включая lib/cli.js — цель bin-ссылки. bun сохраняет режимы из тарбола; на строгой ФС Онрезы exec невозможен, у prisma в тарболе 755 — потому их скрипты работают
+- Проверил реестр npm: unrs-resolver 1.7.x–1.11.x используют bin-стиль постинсталла (napi-postinstall ... check), а 1.12.0+ перешли на node postinstall.js (node-стиль, exec-бит не нужен)
+- unrs-resolver@1.12.2 удовлетворяет диапазону ^1.6.2 от eslint-import-resolver-typescript@3.10.1; лок просто закрепил старую 1.11.1
+- Проверил содержимое postinstall.js в 1.12.2: require("napi-postinstall") программно, без shell/exec — полностью безопасно
+- Применил фикс: package.json overrides { "unrs-resolver": "1.12.2" } (детерминированная гарантия) + bun install (лок обновлён, версия зафиксирована и в trustedDependencies секции лока)
+- Полная симуляция с bun 1.4.3 (версия Онрезы) в /tmp/deploy-test: свежий install 827 пакетов ок; unrs-resolver@1.12.2 установлен, node-стиль; pm untrusted — unrs-resolver отсутствует; pm trust --all — 7 скриптов все зелёные; bun run build — успех (все роуты); lint в основном проекте — exit 0 (резолвер работает); сайт 200
+- Закоммитил 03068eb и запушил в studioarasaca/antresol-perets.ru (remote main = 03068eb)
+
+Stage Summary:
+- Опубликован фикс 03068eb: unrs-resolver жёстко заперт на 1.12.2 с node-стиль постинсталлом
+- Класс проблемы устранён полностью: в дереве больше нет ни одного bin-стиль lifecycle-скрипта — все оставшиеся заблокированные скрипты (7 шт) node-стиль и проходят на ФС Онрезы
+- Онрезе нужен повторный Redeploy — заберёт 03068eb
