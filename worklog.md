@@ -101,3 +101,21 @@ Stage Summary:
 - Проект подключён к новому репозиторию studioarasaca/antresol-perets.ru, ветка main синхронизирована (286ca06)
 - Все данные деплоя валидны: схема Prisma самодостаточна, скрипты сборки/старта готовы для хостинга (Node >= 20.9), секреты в репо отсутствуют
 - Токен из конфига git удалён, рабочее дерево чистое
+---
+Task ID: 5
+Agent: Z.ai Code (main)
+Task: Диагностика и фикс ошибки деплоя на Онрезе (unrs-resolver exit 126)
+
+Work Log:
+- Разобрал лог Онрезы: bun install ок → фаза "Running blocked Bun dependency scripts" (bun pm trust) → postinstall пакета unrs-resolver (вызов bin-файла napi-postinstall) → Permission denied, exit 126
+- Установил причину: цепочка eslint-config-next → eslint-import-resolver-typescript → unrs-resolver; на рантайме Онрезы trust-фаза не может напрямую исполнять bin-файлы, при этом node-стиль скрипты (node file.js) проходят; install-фаза bin-исполнение работает (их prisma generate прошёл)
+- Нашёл корень: trustedDependencies: ["unrs-resolver"] был добавлен ранее только в рабочую копию и НЕ попал в коммит f4b69ba / пуш a0f9a9f — хостинг деплоил без фикса
+- Скачал bun 1.4.3 (идентичен версии Онрезы), воспроизвёл пайплайн в /tmp/deploy-test: свежий bun install (827 пакетов) → pm untrusted (unrs-resolver в списке) → добавил trustedDependencies → свежий install: unrs-resolver исчез из заблокированных → bun run build: успех (5/5 страниц) → db push без папки db/: создаёт и папку, и файл сам
+- Проверил остальные заблокированные пакеты (@parcel/watcher, @swc/core, @prisma/engines, es5-ext, @prisma/client, sharp) — все node-стиль, на Онрезе проходят
+- Закоммитил фикс (738036b) и запушил в studioarasaca/antresol-perets.ru; remote main = 738036b верифицирован
+- Песочница: сайт 200, lint чистый
+
+Stage Summary:
+- Фикс деплоя опубликован: commit 738036b "fix(deploy): trust unrs-resolver lifecycle script" в studioarasaca/antresol-perets.ru
+- Онрезе нужен повторный деплой (Redeploy) — заберёт коммит 738036b, где unrs-resolver выполняется на фазе install, минуя сломанную trust-фазу
+- Полный пайплайн Онрезы (bun 1.4.3: install → trust → build → db push) проверен локально — все этапы зелёные
